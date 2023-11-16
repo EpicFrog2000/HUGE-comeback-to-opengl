@@ -22,9 +22,8 @@ int nbFrames = 0;
 void renderLoop(GLFWwindow* window,
 std::vector<DrawDetails> ourDrawDetails,
 std::vector<DrawDetails> ourRayDrawDetails,
-std::vector<GLfloat> LineposData,
-std::vector<GLfloat>  LinecolorData,
-std::vector<GLuint>  LineElems) {
+std::vector<RaysData> MyRays,
+std::vector<WallsData> wallsData) {
     double xpos, ypos;
     glfwGetCursorPos(window, &xpos, &ypos);
     GLfloat x = static_cast<GLfloat>((2.0 * xpos) / 1000.0 - 1.0);  // Transform to the range [-1, 1] for X
@@ -48,20 +47,18 @@ std::vector<GLuint>  LineElems) {
         
         // Rotate points by 10 degrees on LMB
         static int oldState = GLFW_RELEASE;
-        rotateRays(window, oldState, LineposData);
-        moveRays(window, LineposData, lastX, lastY);
+        rotateRays(window, oldState, MyRays[0].LineposData);
+        moveRays(window, MyRays[0].LineposData, lastX, lastY);
         ourRayDrawDetails.clear();
-        ourRayDrawDetails.push_back(UploadRayMesh2(
-        LineposData, // points
-        LinecolorData, // colors at points
-        LineElems // indices
+        ourRayDrawDetails.push_back(UploadRayMesh(
+            MyRays[0].LineposData, // points
+            MyRays[0].LinecolorData, // colors at points
+            MyRays[0].LineElems // indices
         ));
         // here i can calculate and change lenght of rays
+        //for each ray:
+        
 
-
-        //UploadRayMesh(combinedVertices);
-        // Render all the lines at once
-        //glDrawArrays(GL_LINES, 0, vertexCount);
 
         Draw(ourDrawDetails);
         DrawLines(ourRayDrawDetails);
@@ -88,23 +85,31 @@ int main() {
 
     //Setting up walls data
     std::vector<DrawDetails> ourDrawDetails;
-    const GLfloat posData[] = {
+    GLfloat posData[] = {
         0.1f, -0.1f, 0.0f,
         -0.1f, -0.1f, 0.0f,
         0.0f, 0.1f, 0.0f,
     };
-    const GLfloat colorData[] = {
+    GLfloat colorData[] = {
         1.0f, 0.0f, 0.0f,
         0.5f, 0.0f, 0.2f,
         0.5f, 0.5f, 0.0f,
     };
-    const GLuint elems[] = { 0, 1, 2 };
+    GLuint elems[] = { 0, 1, 2 };
+    std::vector<WallsData> wallsData;
+    wallsData.push_back(WallsData(posData, colorData, elems, 
+    sizeof(posData) / sizeof(posData[0]), 
+    sizeof(colorData) / sizeof(colorData[0]), 
+    sizeof(elems) / sizeof(elems[0])));
+
     ourDrawDetails.push_back(UploadMesh(
-        posData, // points
-        colorData, // colors at points
+        wallsData[0].posData, // points
+        wallsData[0].colorData, // colors at points
         sizeof(posData) / sizeof(posData[0]), // size of array pos
-        elems, // indices
+        wallsData[0].elems, // indices
         sizeof(elems) / sizeof(elems[0]))); // size of array elems
+
+
 
 
 
@@ -114,7 +119,7 @@ int main() {
     GLfloat x = 0.0f;
     GLfloat y = 0.0f;
     // Set up base rays
-    const int rayCount = 30;
+    int rayCount = 30;
     GLfloat baseRayLenght = 0.5f;  // Desired line length
     // Initialize to store the combined vertices
     std::vector<GLfloat> LineposData = {
@@ -135,13 +140,14 @@ int main() {
 
         LineElems.push_back(0);
         LineElems.push_back(i+1);
-    }   
-    
+    }
 
-    ourRayDrawDetails.push_back(UploadRayMesh2(
-        LineposData, // points
-        LinecolorData, // colors at points
-        LineElems // indices
+    std::vector<RaysData> MyRays;
+    MyRays.push_back(RaysData(LineposData, LinecolorData, LineElems));
+    ourRayDrawDetails.push_back(UploadRayMesh(
+        MyRays[0].LineposData, // points
+        MyRays[0].LinecolorData, // colors at points
+        MyRays[0].LineElems // indices
         ));
 
 
@@ -153,10 +159,11 @@ int main() {
     glEnable(GL_DEPTH_TEST);
     
     // Your rendering loop
-    renderLoop(window, ourDrawDetails, ourRayDrawDetails, LineposData, LinecolorData, LineElems);
+    renderLoop(window, ourDrawDetails, ourRayDrawDetails, MyRays, wallsData;);
 
     // UnloadMesh here
     UnloadMesh(ourDrawDetails);
+    UnloadMesh(ourRayDrawDetails);
 
     glfwTerminate();
     return 0;

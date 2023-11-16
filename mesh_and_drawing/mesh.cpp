@@ -21,7 +21,7 @@ struct RaysData{
     std::vector<GLfloat> LineposData = {};
     std::vector<GLfloat>  LinecolorData = {};
     std::vector<GLuint>  LineElems = {};
-}
+};
 
 struct WallsData {
     WallsData(GLfloat* pos, GLfloat* cD, GLuint* Elems, size_t posSize, size_t cDSize, size_t elemsSize) {

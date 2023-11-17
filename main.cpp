@@ -61,12 +61,6 @@ std::vector<WallsData> wallsData) {
             for (int i = 1; i < (ray.LineposData.size() / 2); ++i) {
                 for (const auto& wall : wallsData){
                     for (int j = 0; j < wall.elems.size(); j++) {
-                        std::cout << "ray data:" << std::endl;
-                        std::cout << ray.LineposData[0] << ", " << ray.LineposData[1] << std::endl;
-                        std::cout << ray.LineposData[2 * i] << ", " <<  ray.LineposData[2 * i + 1] << std::endl;
-                        std::cout << "wall data:" << std::endl;
-                        std::cout << wall.posData[wall.elems[j] * 3] << ", " <<  wall.posData[wall.elems[j] * 3 + 1] << std::endl;
-                        std::cout << wall.posData[wall.elems[j+1] * 3] << ", " <<  wall.posData[wall.elems[j+1] * 3 + 1] << std::endl;
                         Point p1 = {ray.LineposData[0], ray.LineposData[1]};
                         Point q1 = {ray.LineposData[2 * i], ray.LineposData[2 * i + 1]};
                         Point p2 = {wall.posData[wall.elems[j] * 3], wall.posData[wall.elems[j] * 3 + 1]};
@@ -74,27 +68,26 @@ std::vector<WallsData> wallsData) {
                         Line line1 = {p1, q1};
                         Line line2 = {p2, q2};
                         Point intersectionPoint;
-                        if (doIntersect(line1, line2, intersectionPoint)) {
-                            std::cout << "The lines intersect at (" << intersectionPoint.x << ", " << intersectionPoint.y << ")." << std::endl;
-                            ray.LineposData[2 * i] = intersectionPoint.x;
-                            ray.LineposData[2 * i + 1] = intersectionPoint.y;
-                            std::cout << "ray ex: " << ray.LineposData[2 * i] << ", ray ey:" <<   ray.LineposData[2 * i + 1] << std::endl;
-                            break;
-                        } else {
-                            std::cout << "The lines do not intersect." << std::endl;
-                            // Calculate the direction vector
-                            GLfloat dx = line1.end.x - line1.start.x;
-                            GLfloat dy = line1.end.y - line1.start.y;
-                            // Normalize the direction vector
-                            GLfloat length = std::sqrt(dx * dx + dy * dy);
-                            dx /= length;
-                            dy /= length;
-                            // Set the endpoints to create a line with a length of 0.5f
-                            ray.LineposData[2 * i] = line1.start.x + 0.5f * dx;
-                            ray.LineposData[2 * i + 1] = line1.start.y + 0.5f * dy;
+                        if(!isPointOnLine(p1, line2)){
+                            if (doIntersect(line1, line2, intersectionPoint)) {
+                                ray.LineposData[2 * i] = intersectionPoint.x;
+                                ray.LineposData[2 * i + 1] = intersectionPoint.y;
+                                break;
+                            } else {
+                            // change back the length of ray to a default value (0.5)
+                                // Calculate the direction vector
+                                GLfloat dx = line1.end.x - line1.start.x;
+                                GLfloat dy = line1.end.y - line1.start.y;
+                                // Normalize the direction vector
+                                GLfloat length = std::sqrt(dx * dx + dy * dy);
+                                dx /= length;
+                                dy /= length;
+                                // Set the endpoints to create a line with a length of 0.5f
+                                ray.LineposData[2 * i] = line1.start.x + 0.5f * dx;
+                                ray.LineposData[2 * i + 1] = line1.start.y + 0.5f * dy;
+                            }
                         }
                     }
-                    std::cout << "=====" << std::endl;
                 }
             }
         }
@@ -140,9 +133,9 @@ int main() {
         0.0f, 0.1f, 0.0f,
     };
     GLfloat colorData[] = {
-        1.0f, 0.0f, 0.0f,
-        0.5f, 0.0f, 0.2f,
-        0.5f, 0.5f, 0.0f,
+        1.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, 1.0f,
     };
     GLuint elems[] = { 0, 1, 2 };
     std::vector<WallsData> wallsData;
@@ -170,7 +163,7 @@ int main() {
         x,y, // stis is starting point of all rays
     };
     std::vector<GLfloat>  LinecolorData = {
-        1.0f, 0.0f, 0.0f,
+        1.0f, 1.0f, 1.0f,
     };
     std::vector<GLuint>  LineElems = {};//indices for keeping it optimized
     for (int i = 0; i <= rayCount; i ++) {
@@ -180,7 +173,7 @@ int main() {
         LineposData.push_back(nextX);
         LineposData.push_back(nextY);
 
-        LinecolorData.insert(LinecolorData.end(), {1.0f, 0.0f, 0.0f});
+        LinecolorData.insert(LinecolorData.end(), {1.0f, 1.0f, 1.0f});
 
         LineElems.push_back(0);
         LineElems.push_back(i+1);
@@ -196,10 +189,10 @@ int main() {
 
 
     // Set background color
-    glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     glLineWidth(1.0f);
     glEnable(GL_LINE_SMOOTH);
-    glHint(GL_LINE_SMOOTH_HINT,  GL_NICEST);
+    glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
     glEnable(GL_DEPTH_TEST);
     
     // Your rendering loop

@@ -63,3 +63,27 @@ bool doIntersect(Line l1, Line l2, Point& intersectionPoint) {
 
     return false;
 }
+
+// Function to check if a point is on a line segment
+bool isPointOnLine(const Point& p, const Line& line) {
+    GLfloat crossProduct = (p.y - line.start.y) * (line.end.x - line.start.x) - (p.x - line.start.x) * (line.end.y - line.start.y);
+
+    // Check if the point is on the line segment
+    if (fabs(crossProduct) > 0.00001) {
+        return false;
+    }
+
+    GLfloat dotProduct = (p.x - line.start.x) * (line.end.x - line.start.x) + (p.y - line.start.y) * (line.end.y - line.start.y);
+
+    if (dotProduct < 0) {
+        return false;
+    }
+
+    GLfloat squaredLength = (line.end.x - line.start.x) * (line.end.x - line.start.x) + (line.end.y - line.start.y) * (line.end.y - line.start.y);
+
+    if (dotProduct > squaredLength) {
+        return false;
+    }
+
+    return true;
+}

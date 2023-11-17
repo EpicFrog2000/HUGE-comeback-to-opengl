@@ -61,25 +61,40 @@ std::vector<WallsData> wallsData) {
             for (int i = 1; i < (ray.LineposData.size() / 2); ++i) {
                 for (const auto& wall : wallsData){
                     for (int j = 0; j < wall.elems.size(); j++) {
+                        std::cout << "ray data:" << std::endl;
+                        std::cout << ray.LineposData[0] << ", " << ray.LineposData[1] << std::endl;
+                        std::cout << ray.LineposData[2 * i] << ", " <<  ray.LineposData[2 * i + 1] << std::endl;
+                        std::cout << "wall data:" << std::endl;
+                        std::cout << wall.posData[wall.elems[j] * 3] << ", " <<  wall.posData[wall.elems[j] * 3 + 1] << std::endl;
+                        std::cout << wall.posData[wall.elems[j+1] * 3] << ", " <<  wall.posData[wall.elems[j+1] * 3 + 1] << std::endl;
                         Point p1 = {ray.LineposData[0], ray.LineposData[1]};
                         Point q1 = {ray.LineposData[2 * i], ray.LineposData[2 * i + 1]};
                         Point p2 = {wall.posData[wall.elems[j] * 3], wall.posData[wall.elems[j] * 3 + 1]};
                         Point q2 = {wall.posData[wall.elems[j+1] * 3], wall.posData[wall.elems[j+1] * 3 + 1]};
+                        Line line1 = {p1, q1};
+                        Line line2 = {p2, q2};
                         Point intersectionPoint;
-                        if (doLinesIntersect(p1, q1, p2, q2, intersectionPoint)) {
-                            Point rayDirection = {q1.x - p1.x, q1.y - p1.y};
-                            Point wallDirection = {q2.x - p2.x, q2.y - p2.y};
-                            float t = (wallDirection.x * (q1.y - p2.y) - wallDirection.y * (q1.x - p2.x)) /
-                                      (rayDirection.x * wallDirection.y - rayDirection.y * wallDirection.x);
-                            Point intersectionPoint = {p1.x + t * rayDirection.x, p1.y + t * rayDirection.y};
-                            float distance = calculateDistance(p1, intersectionPoint);
-                            if (distance <= calculateDistance(p1, q1)) {
-                                setLineLength(ray.LineposData[0], ray.LineposData[1], ray.LineposData[2 * i], ray.LineposData[2 * i + 1], distance);
-                            }
+                        if (doIntersect(line1, line2, intersectionPoint)) {
+                            std::cout << "The lines intersect at (" << intersectionPoint.x << ", " << intersectionPoint.y << ")." << std::endl;
+                            ray.LineposData[2 * i] = intersectionPoint.x;
+                            ray.LineposData[2 * i + 1] = intersectionPoint.y;
+                            std::cout << "ray ex: " << ray.LineposData[2 * i] << ", ray ey:" <<   ray.LineposData[2 * i + 1] << std::endl;
+                            break;
                         } else {
-                            setLineLength(ray.LineposData[0], ray.LineposData[1], ray.LineposData[2 * i], ray.LineposData[2 * i + 1], 0.5f);
+                            std::cout << "The lines do not intersect." << std::endl;
+                            // Calculate the direction vector
+                            GLfloat dx = line1.end.x - line1.start.x;
+                            GLfloat dy = line1.end.y - line1.start.y;
+                            // Normalize the direction vector
+                            GLfloat length = std::sqrt(dx * dx + dy * dy);
+                            dx /= length;
+                            dy /= length;
+                            // Set the endpoints to create a line with a length of 0.5f
+                            ray.LineposData[2 * i] = line1.start.x + 0.5f * dx;
+                            ray.LineposData[2 * i + 1] = line1.start.y + 0.5f * dy;
                         }
                     }
+                    std::cout << "=====" << std::endl;
                 }
             }
         }

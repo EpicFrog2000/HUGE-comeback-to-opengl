@@ -1,5 +1,15 @@
 #include <GL/glew.h>
 #include <cmath>
+#include <iostream>
+#include <cmath>
+
+struct Point {
+    GLfloat x, y;
+};
+
+struct Line {
+    Point start, end;
+};
 
 
 // Assuming genRotatedPoints looks something like this
@@ -15,60 +25,41 @@ void genRotatedPoints(float centerX, float centerY, float& x, float& y, float an
     y = newY + centerY;
 }
 
-#include <iostream>
-#include <cmath>
+// Helper function to find the orientation of three points
+int orientation(Point p, Point q, Point r) {
+    float val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
+    if (val == 0) return 0;  // Collinear
+    return (val > 0) ? 1 : 2; // Clockwise or counterclockwise
+}
 
-struct Point {
-    GLfloat x, y;
-};
 
-// Funkcja sprawdzająca, czy dwie linie przecinają się
-bool doLinesIntersect(Point p1, Point q1, Point p2, Point q2, Point &intersectionPoint) {
-    float orientation1 = (q1.y - p1.y) * (p2.x - q1.x) - (q1.x - p1.x) * (p2.y - q1.y);
-    float orientation2 = (q1.y - p1.y) * (q2.x - q1.x) - (q1.x - p1.x) * (q2.y - q1.y);
-    float orientation3 = (q2.y - p2.y) * (p1.x - q2.x) - (q2.x - p2.x) * (p1.y - q2.y);
-    float orientation4 = (q2.y - p2.y) * (q1.x - q2.x) - (q2.x - p2.x) * (q1.y - q2.y);
+// Check if two line segments intersect
+bool doIntersect(Line l1, Line l2, Point& intersectionPoint) {
+    // Find the 4 orientations needed for general and special cases
+    int o1 = orientation(l1.start, l1.end, l2.start);
+    int o2 = orientation(l1.start, l1.end, l2.end);
+    int o3 = orientation(l2.start, l2.end, l1.start);
+    int o4 = orientation(l2.start, l2.end, l1.end);
 
-    // Check for parallel lines
-    if (orientation1 == 0 && orientation2 == 0 && orientation3 == 0 && orientation4 == 0) {
-        // Lines are collinear, handle this case as needed
-        return false;
-    }
-
-    // Check if orientations are different
-    if ((orientation1 * orientation2 < 0) && (orientation3 * orientation4 < 0)) {
+    // General case
+    if (o1 != o2 && o3 != o4) {
         // Lines intersect, calculate the intersection point
-        float t = ((p2.x - p1.x) * (q1.y - p1.y) - (p2.y - p1.y) * (q1.x - p1.x)) /
-              ((q2.y - p2.y) * (q1.x - p1.x) - (q2.x - p2.x) * (q1.y - p1.y));
+        float x1 = l1.start.x, y1 = l1.start.y;
+        float x2 = l1.end.x, y2 = l1.end.y;
+        float x3 = l2.start.x, y3 = l2.start.y;
+        float x4 = l2.end.x, y4 = l2.end.y;
 
-        intersectionPoint.x = p1.x + t * (q1.x - p1.x);
-        intersectionPoint.y = p1.y + t * (q1.y - p1.y);
+        float determinant = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+        if (determinant == 0) {
+            // Lines are parallel, no unique intersection point
+            return false;
+        }
 
-        return true; // Lines intersect
-    } else {
-        return false; // Lines do not intersect
+        intersectionPoint.x = ((x1 * y2 - y1 * x2) * (x3 - x4) - (x1 - x2) * (x3 * y4 - y3 * x4)) / determinant;
+        intersectionPoint.y = ((x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4)) / determinant;
+
+        return true;
     }
-}
 
-
-// Funkcja obliczająca odległość między dwoma punktami
-float calculateDistance(Point p1, Point p2) {
-    float dx = p2.x - p1.x;
-    float dy = p2.y - p1.y;
-    return std::sqrt(dx * dx + dy * dy);
-}
-
-// Function to set the length of a line to a specific amount
-void setLineLength(GLfloat &sX, GLfloat &sY, GLfloat &eX, GLfloat &eY, GLfloat targetLength) {
-    // Calculate the original length of the line
-    Point start = {sX, sY};
-    Point end = {eX, eY};
-    GLfloat originalLength = calculateDistance(start, end);
-
-    // Scale the coordinates to achieve the target length
-    if (originalLength > 0) {
-        GLfloat scaleFactor = targetLength / originalLength;
-        eX = sX + (eX - sX) * scaleFactor;
-        eY = sY + (eY - sY) * scaleFactor;
-    }
+    return false;
 }

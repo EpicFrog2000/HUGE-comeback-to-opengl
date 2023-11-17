@@ -11,6 +11,15 @@ struct Line {
     Point start, end;
 };
 
+GLfloat distance(const Point& p1, const Point& p2) {
+    GLfloat dx = p2.x - p1.x;
+    GLfloat dy = p2.y - p1.y;
+    return std::sqrt(dx * dx + dy * dy);
+}
+
+GLfloat length(const Line& line) {
+    return distance(line.start, line.end);
+}
 
 // Assuming genRotatedPoints looks something like this
 void genRotatedPoints(float centerX, float centerY, float& x, float& y, float angle) {

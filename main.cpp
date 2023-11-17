@@ -60,6 +60,7 @@ std::vector<WallsData> wallsData) {
         for (auto& ray : MyRays) {
             for (int i = 1; i < (ray.LineposData.size() / 2); ++i) {
                 for (const auto& wall : wallsData){
+                    bool hitWall = false;
                     for (int j = 0; j < wall.elems.size(); j++) {
                         Point p1 = {ray.LineposData[0], ray.LineposData[1]};
                         Point q1 = {ray.LineposData[2 * i], ray.LineposData[2 * i + 1]};
@@ -69,12 +70,8 @@ std::vector<WallsData> wallsData) {
                         Line line2 = {p2, q2};
                         Point intersectionPoint;
                         if(!isPointOnLine(p1, line2)){
-                            if (doIntersect(line1, line2, intersectionPoint)) {
-                                ray.LineposData[2 * i] = intersectionPoint.x;
-                                ray.LineposData[2 * i + 1] = intersectionPoint.y;
-                                break;
-                            } else {
-                            // change back the length of ray to a default value (0.5)
+                            if (!doIntersect(line1, line2, intersectionPoint)) {
+                                // change back the length of ray to a default value (0.5)
                                 // Calculate the direction vector
                                 GLfloat dx = line1.end.x - line1.start.x;
                                 GLfloat dy = line1.end.y - line1.start.y;
@@ -85,21 +82,28 @@ std::vector<WallsData> wallsData) {
                                 // Set the endpoints to create a line with a length of 0.5f
                                 ray.LineposData[2 * i] = line1.start.x + 0.5f * dx;
                                 ray.LineposData[2 * i + 1] = line1.start.y + 0.5f * dy;
+                            } else {
+                                Line created = {p1, intersectionPoint};
+                                if(length(created)<=length(line1)){
+                                    ray.LineposData[2 * i] = intersectionPoint.x;
+                                    ray.LineposData[2 * i + 1] = intersectionPoint.y;
+                                    hitWall = true;
+                                    break;
+                                }
                             }
                         }
                     }
+                    if(hitWall){break;}
                 }
             }
         }
         
-
         MyRays[0] = RaysData(MyRays[0].LineposData, MyRays[0].LinecolorData, MyRays[0].LineElems);
-        ourRayDrawDetails[0] = UploadRayMesh(
-        MyRays[0].LineposData, // points
-        MyRays[0].LinecolorData, // colors at points
-        MyRays[0].LineElems // indices
-        );
-
+            ourRayDrawDetails[0] = UploadRayMesh(
+            MyRays[0].LineposData, // points
+            MyRays[0].LinecolorData, // colors at points
+            MyRays[0].LineElems // indices
+            );
 
 
         Draw(ourDrawDetails);
@@ -124,9 +128,10 @@ int main() {
     GLuint programID = LoadShaders("SimpleVertexShader.vertexshader", "SimpleFragmentShader.fragmentshader");
     glUseProgram(programID);
 
-
     //Setting up walls data
     std::vector<DrawDetails> ourDrawDetails;
+    std::vector<WallsData> wallsData;
+
     GLfloat posData[] = {
         0.1f, -0.1f, 0.0f,
         -0.1f, -0.1f, 0.0f,
@@ -137,13 +142,11 @@ int main() {
         1.0f, 1.0f, 1.0f,
         1.0f, 1.0f, 1.0f,
     };
-    GLuint elems[] = { 0, 1, 2 };
-    std::vector<WallsData> wallsData;
+    GLuint elems[] = {0, 1, 2};
     wallsData.push_back(WallsData(posData, colorData, elems, 
     sizeof(posData) / sizeof(posData[0]), 
     sizeof(colorData) / sizeof(colorData[0]), 
     sizeof(elems) / sizeof(elems[0])));
-
     ourDrawDetails.push_back(UploadMesh(
         posData, // points
         colorData, // colors at points
@@ -151,12 +154,37 @@ int main() {
         elems, // indices
         sizeof(elems) / sizeof(elems[0]))); // size of array elems
 
+    GLfloat additionalposData[] = {
+        0.5f, 0.5f, 0.0f,
+        0.7f, 0.5f, 0.0f,
+        0.7f, 0.6f, 0.0f,
+    };
+    GLfloat additionalcolorData[] = {
+        1.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, 1.0f,
+    };
+    GLuint additionalelems[] = {0, 1, 2};
+    wallsData.push_back(WallsData(additionalposData, additionalcolorData, additionalelems, 
+    sizeof(additionalposData) / sizeof(additionalposData[0]), 
+    sizeof(additionalcolorData) / sizeof(additionalcolorData[0]), 
+    sizeof(additionalelems) / sizeof(additionalelems[0])));
+    ourDrawDetails.push_back(UploadMesh(
+        additionalposData, // points
+        additionalcolorData, // colors at points
+        sizeof(additionalposData) / sizeof(additionalposData[0]), // size of array pos
+        additionalelems, // indices
+        sizeof(additionalelems) / sizeof(additionalelems[0]))); // size of array elems
+
+
+
+
     //Setting up lines data
     std::vector<DrawDetails> ourRayDrawDetails;
     GLfloat x = 0.0f;
     GLfloat y = 0.0f;
     // Set up base rays
-    int rayCount = 89;
+    int rayCount = 900;
     GLfloat baseRayLenght = 0.5f;  // Desired line length
     // Initialize to store the combined vertices
     std::vector<GLfloat> LineposData = {
@@ -167,8 +195,8 @@ int main() {
     };
     std::vector<GLuint>  LineElems = {};//indices for keeping it optimized
     for (int i = 0; i <= rayCount; i ++) {
-        GLfloat nextX = x + baseRayLenght * cos(1*90/rayCount * i * 3.14159265359f / 180);  // Calculate the x-coordinate
-        GLfloat nextY = y + baseRayLenght * sin(1*90/rayCount * i * 3.14159265359f / 180);  // Calculate the y-coordinate
+        GLfloat nextX = x + baseRayLenght * cos(i * 90.0f / rayCount * 3.14159265359f / 180.0f);  // Calculate the x-coordinate
+        GLfloat nextY = y + baseRayLenght * sin(i * 90.0f / rayCount * 3.14159265359f / 180.0f);  // Calculate the y-coordinate
         // Define the new vertices for the line
         LineposData.push_back(nextX);
         LineposData.push_back(nextY);

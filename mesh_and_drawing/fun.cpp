@@ -38,9 +38,8 @@ void genRotatedPoints(float centerX, float centerY, float& x, float& y, float an
 int orientation(Point p, Point q, Point r) {
     float val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
     if (val == 0) return 0;  // Collinear
-    return (val > 0) ? 1 : 2; // Clockwise or counterclockwise
+    return (val > 0) ? 1 : -1; // Clockwise or counterclockwise
 }
-
 
 // Check if two line segments intersect
 bool doIntersect(Line l1, Line l2, Point& intersectionPoint) {

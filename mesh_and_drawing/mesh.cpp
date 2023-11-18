@@ -127,8 +127,8 @@ static void rotateRays(GLFWwindow* window, int& oldState, std::vector<GLfloat>& 
 static DrawDetails UploadRayMesh(
     std::vector<GLfloat>& verts,
     std::vector<GLfloat>& colors,
-    std::vector<GLuint>& elems)
-{
+    std::vector<GLuint>& elems) {
+
     GLuint vboHandles[2];
     glGenBuffers(2, vboHandles);
     GLuint posBufferHandle = vboHandles[0];

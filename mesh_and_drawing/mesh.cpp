@@ -177,3 +177,71 @@ static void DrawLines(std::vector<DrawDetails>& drawDetails) {
     }
     glBindVertexArray(0);
 }
+
+static void doThatCollisionStuff(std::vector<RaysData>& MyRays, 
+                                std::vector<WallsData>& wallsData, 
+                                std::vector<DrawDetails>& ourLineDrawDetails){
+    // here i can calculate and change lenght of rays
+    //for each ray check for colision with any wall and change rays length
+    for (auto& ray : MyRays) {
+        for (int i = 1; i < (ray.LineposData.size() / 2); ++i) {
+            Point currentRayStartPoint = {ray.LineposData[0], ray.LineposData[1]};
+            Point currentRayEndPoint = {ray.LineposData[2 * i], ray.LineposData[2 * i + 1]};
+            // Calculate direction vector
+            GLfloat dx = currentRayEndPoint.x - currentRayStartPoint.x;
+            GLfloat dy = currentRayEndPoint.y - currentRayStartPoint.y;
+            // Normalize the direction vector
+            GLfloat newlength = std::sqrt(dx * dx + dy * dy);
+            dx /= newlength;
+            dy /= newlength;
+            // Set the endpoints to create a line with a length of 0.5f
+            ray.LineposData[2 * i] = currentRayStartPoint.x + 1.0f * dx;
+            ray.LineposData[2 * i + 1] = currentRayStartPoint.y + 1.0f * dy;
+            for (const auto& wall : wallsData) {
+                for (int j = 0; j < wall.elems.size(); j++) {
+                    Point currentRayStartPoint = {ray.LineposData[0], ray.LineposData[1]};
+                    Point currentRayEndPoint = {ray.LineposData[2 * i], ray.LineposData[2 * i + 1]};
+                    Point currentWallStartPoint = {wall.posData[wall.elems[j] * 3], wall.posData[wall.elems[j] * 3 + 1]};
+                    Point currentWallEndPoint = {wall.posData[wall.elems[j + 1] * 3], wall.posData[wall.elems[j + 1] * 3 + 1]};
+                    Line currentRayLine = {currentRayStartPoint, currentRayEndPoint};
+                    Line currentWallLine = {currentWallStartPoint, currentWallEndPoint};
+                    Point intersectionPoint;
+                    if (!isPointOnLine(currentRayStartPoint, currentWallLine) &&
+                        doIntersect(currentRayLine, currentWallLine, intersectionPoint)) {
+                        Line created = {currentRayStartPoint, intersectionPoint};
+                        if (length(created) < length(currentRayLine)) {
+                            ray.LineposData[2 * i] = intersectionPoint.x;
+                            ray.LineposData[2 * i + 1] = intersectionPoint.y;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    MyRays[0] = RaysData(MyRays[0].LineposData, MyRays[0].LinecolorData, MyRays[0].LineElems);
+        ourLineDrawDetails[0] = UploadRayMesh(
+        MyRays[0].LineposData, // points
+        MyRays[0].LinecolorData, // colors at points
+        MyRays[0].LineElems // indices
+        );
+}
+
+static void addObjectAsToWalls(std::vector<DrawDetails>& ourDrawDetails,
+                                std::vector<WallsData>& wallsData, 
+                                GLfloat* addposData,
+                                GLfloat* addcolorData,
+                                GLuint* addelems,
+                                size_t posDataSize,
+                                size_t colorDataSize,
+                                size_t elemsSize){
+    wallsData.push_back(WallsData(addposData, addcolorData, addelems, 
+        posDataSize, colorDataSize, elemsSize));
+    
+    ourDrawDetails.push_back(UploadMesh(
+        addposData, // points
+        addcolorData, // colors at points
+        posDataSize, // size of array pos
+        addelems, // indices
+        elemsSize)); // size of array elems
+}

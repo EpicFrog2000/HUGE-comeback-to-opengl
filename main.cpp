@@ -21,7 +21,7 @@ int nbFrames = 0;
 // Function for the main rendering loop
 void renderLoop(GLFWwindow* window,
 std::vector<DrawDetails> ourDrawDetails,
-std::vector<DrawDetails> ourRayDrawDetails,
+std::vector<DrawDetails> ourLineDrawDetails,
 std::vector<RaysData> MyRays,
 std::vector<WallsData> wallsData) {
     double xpos, ypos;
@@ -49,65 +49,22 @@ std::vector<WallsData> wallsData) {
         static int oldState = GLFW_RELEASE;
         rotateRays(window, oldState, MyRays[0].LineposData);
         moveRays(window, MyRays[0].LineposData, lastX, lastY);
-        ourRayDrawDetails.clear();
-        ourRayDrawDetails.push_back(UploadRayMesh(
+        ourLineDrawDetails.clear();
+        ourLineDrawDetails.push_back(UploadRayMesh(
             MyRays[0].LineposData, // points
             MyRays[0].LinecolorData, // colors at points
             MyRays[0].LineElems // indices
         ));
 
-        // here i can calculate and change lenght of rays
-        //for each ray check for colision with any wall and change rays length
-        for (auto& ray : MyRays) {
-            for (int i = 1; i < (ray.LineposData.size() / 2); ++i) {
-                Point currentRayStartPoint = {ray.LineposData[0], ray.LineposData[1]};
-                Point currentRayEndPoint = {ray.LineposData[2 * i], ray.LineposData[2 * i + 1]};
-                // Calculate direction vector
-                GLfloat dx = currentRayEndPoint.x - currentRayStartPoint.x;
-                GLfloat dy = currentRayEndPoint.y - currentRayStartPoint.y;
-                // Normalize the direction vector
-                GLfloat newlength = std::sqrt(dx * dx + dy * dy);
-                dx /= newlength;
-                dy /= newlength;
-                // Set the endpoints to create a line with a length of 0.5f
-                ray.LineposData[2 * i] = currentRayStartPoint.x + 1.0f * dx;
-                ray.LineposData[2 * i + 1] = currentRayStartPoint.y + 1.0f * dy;
-                for (const auto& wall : wallsData) {
-                    for (int j = 0; j < wall.elems.size(); j++) {
-                        Point currentRayStartPoint = {ray.LineposData[0], ray.LineposData[1]};
-                        Point currentRayEndPoint = {ray.LineposData[2 * i], ray.LineposData[2 * i + 1]};
-                        Point currentWallStartPoint = {wall.posData[wall.elems[j] * 3], wall.posData[wall.elems[j] * 3 + 1]};
-                        Point currentWallEndPoint = {wall.posData[wall.elems[j + 1] * 3], wall.posData[wall.elems[j + 1] * 3 + 1]};
-                        Line currentRayLine = {currentRayStartPoint, currentRayEndPoint};
-                        Line currentWallLine = {currentWallStartPoint, currentWallEndPoint};
-                        Point intersectionPoint;
-                        if (!isPointOnLine(currentRayStartPoint, currentWallLine) &&
-                            doIntersect(currentRayLine, currentWallLine, intersectionPoint)) {
-                            Line created = {currentRayStartPoint, intersectionPoint};
-                            if (length(created) < length(currentRayLine)) {
-                                ray.LineposData[2 * i] = intersectionPoint.x;
-                                ray.LineposData[2 * i + 1] = intersectionPoint.y;
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        doThatCollisionStuff(MyRays, wallsData, ourLineDrawDetails);
 
-
-        
-        MyRays[0] = RaysData(MyRays[0].LineposData, MyRays[0].LinecolorData, MyRays[0].LineElems);
-            ourRayDrawDetails[0] = UploadRayMesh(
-            MyRays[0].LineposData, // points
-            MyRays[0].LinecolorData, // colors at points
-            MyRays[0].LineElems // indices
-            );
-
+        //make dynamic walls creation
+        //add lines as walls
 
         Draw(ourDrawDetails);
-        DrawLines(ourRayDrawDetails);
+        DrawLines(ourLineDrawDetails);
 
-        UnloadMesh(ourRayDrawDetails);
+        UnloadMesh(ourLineDrawDetails);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -131,59 +88,64 @@ int main() {
     std::vector<DrawDetails> ourDrawDetails;
     std::vector<WallsData> wallsData;
 
+    {
+    GLfloat posData[] = {
+        -0.7f, -0.8f, 0.0f,
+        -0.1f, -0.1f, 0.0f,
+        -0.4f, 0.6f, 0.0f,
+    };
+    GLfloat colorData[] = {
+        0.5f, 0.5f, 0.5f,
+        0.5f, 0.5f, 0.5f,
+        0.5f, 0.5f, 0.5f,
+    };
+    GLuint elems[] = {0, 1, 2};
+    addObjectAsToWalls(ourDrawDetails, wallsData, posData, colorData, elems,
+                   sizeof(posData) / sizeof(posData[0]),
+                   sizeof(colorData) / sizeof(colorData[0]),
+                   sizeof(elems) / sizeof(elems[0]));
+    }
+    {
     GLfloat posData[] = {
         0.3f, -0.2f, 0.0f,
         -0.1f, -0.1f, 0.0f,
         -0.3f, 0.2f, 0.0f,
     };
     GLfloat colorData[] = {
-        1.0f, 1.0f, 1.0f,
-        1.0f, 1.0f, 1.0f,
-        1.0f, 1.0f, 1.0f,
+        0.5f, 0.5f, 0.5f,
+        0.5f, 0.5f, 0.5f,
+        0.5f, 0.5f, 0.5f,
     };
     GLuint elems[] = {0, 1, 2};
-    wallsData.push_back(WallsData(posData, colorData, elems, 
-    sizeof(posData) / sizeof(posData[0]), 
-    sizeof(colorData) / sizeof(colorData[0]), 
-    sizeof(elems) / sizeof(elems[0])));
-    ourDrawDetails.push_back(UploadMesh(
-        posData, // points
-        colorData, // colors at points
-        sizeof(posData) / sizeof(posData[0]), // size of array pos
-        elems, // indices
-        sizeof(elems) / sizeof(elems[0]))); // size of array elems
-
-    GLfloat additionalposData[] = {
+    addObjectAsToWalls(ourDrawDetails, wallsData, posData, colorData, elems,
+                   sizeof(posData) / sizeof(posData[0]),
+                   sizeof(colorData) / sizeof(colorData[0]),
+                   sizeof(elems) / sizeof(elems[0]));
+    }
+    {
+    GLfloat posData[] = {
         0.2f, 0.2f, 0.0f,
         0.7f, 0.5f, 0.0f,
         0.7f, 0.6f, 0.0f,
     };
-    GLfloat additionalcolorData[] = {
-        1.0f, 1.0f, 1.0f,
-        1.0f, 1.0f, 1.0f,
-        1.0f, 1.0f, 1.0f,
+    GLfloat colorData[] = {
+        0.5f, 0.5f, 0.5f,
+        0.5f, 0.5f, 0.5f,
+        0.5f, 0.5f, 0.5f,
     };
-    GLuint additionalelems[] = {0, 1, 2};
-    wallsData.push_back(WallsData(additionalposData, additionalcolorData, additionalelems, 
-    sizeof(additionalposData) / sizeof(additionalposData[0]), 
-    sizeof(additionalcolorData) / sizeof(additionalcolorData[0]), 
-    sizeof(additionalelems) / sizeof(additionalelems[0])));
-    ourDrawDetails.push_back(UploadMesh(
-        additionalposData, // points
-        additionalcolorData, // colors at points
-        sizeof(additionalposData) / sizeof(additionalposData[0]), // size of array pos
-        additionalelems, // indices
-        sizeof(additionalelems) / sizeof(additionalelems[0]))); // size of array elems
-
-
-
+    GLuint elems[] = {0, 1, 2};
+    addObjectAsToWalls(ourDrawDetails, wallsData, posData, colorData, elems,
+                   sizeof(posData) / sizeof(posData[0]),
+                   sizeof(colorData) / sizeof(colorData[0]),
+                   sizeof(elems) / sizeof(elems[0]));
+    }
 
     //Setting up lines data
-    std::vector<DrawDetails> ourRayDrawDetails;
+    std::vector<DrawDetails> ourLineDrawDetails;
     GLfloat x = 0.0f;
     GLfloat y = 0.0f;
     // Set up base rays
-    int rayCount = 90;
+    const int rayCount = 90;
     GLfloat baseRayLenght = 1.0f;  // Desired line length
     // Initialize to store the combined vertices
     std::vector<GLfloat> LineposData = {
@@ -205,10 +167,9 @@ int main() {
         LineElems.push_back(0);
         LineElems.push_back(i+1);
     }
-
     std::vector<RaysData> MyRays;
     MyRays.push_back(RaysData(LineposData, LinecolorData, LineElems));
-    ourRayDrawDetails.push_back(UploadRayMesh(
+    ourLineDrawDetails.push_back(UploadRayMesh(
         MyRays[0].LineposData, // points
         MyRays[0].LinecolorData, // colors at points
         MyRays[0].LineElems // indices
@@ -219,7 +180,7 @@ int main() {
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     glLineWidth(0.5f);
     glEnable(GL_LINE_SMOOTH);
-    //glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+    glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
     glEnable(GL_DEPTH_TEST);
     glLineWidth(2);
 
@@ -227,11 +188,11 @@ int main() {
     glEnable(GL_MULTISAMPLE);  
     
     // Your rendering loop
-    renderLoop(window, ourDrawDetails, ourRayDrawDetails, MyRays, wallsData);
+    renderLoop(window, ourDrawDetails, ourLineDrawDetails, MyRays, wallsData);
 
     // UnloadMesh here
     UnloadMesh(ourDrawDetails);
-    UnloadMesh(ourRayDrawDetails);
+    UnloadMesh(ourLineDrawDetails);
 
     glfwTerminate();
     return 0;

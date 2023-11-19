@@ -95,3 +95,4 @@ bool isPointOnLine(const Point& p, const Line& line) {
 
     return true;
 }
+

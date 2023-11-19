@@ -1,7 +1,7 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <vector>
-#include "fun.cpp"
+#include "fun.cpp" // and by fun i mean math stuff
 
 struct DrawDetails {
     DrawDetails(GLuint v, GLuint e) {
@@ -72,58 +72,6 @@ static DrawDetails UploadMesh(GLfloat* verts, GLfloat* colors, int v_count, GLui
     return DrawDetails(vaoHandle, static_cast<uint32_t>(e_count));
 }
 
-static void UnloadMesh(std::vector<DrawDetails>& details) {
-    for (const auto& d : details) {
-        glDeleteVertexArrays(1, &d.VAO);
-    }
-    details.clear();
-}
-
-static void Draw(std::vector<DrawDetails>& drawDetails) {
-    for (const auto& d : drawDetails) {
-        glBindVertexArray(d.VAO);
-        glDrawElements(GL_TRIANGLES, d.numElements, GL_UNSIGNED_INT, nullptr);
-    }
-    glBindVertexArray(0);
-}
-
-static void moveRays(GLFWwindow* window, std::vector<GLfloat>& LineposData, GLfloat& lastX, GLfloat& lastY) {
-    // Get cursor position
-    double xpos, ypos;
-    glfwGetCursorPos(window, &xpos, &ypos);
-    GLfloat x = static_cast<GLfloat>((2.0 * xpos) / 1000.0 - 1.0);  // Transform to the range [-1, 1] for X
-    GLfloat y = static_cast<GLfloat>(1.0 - (2.0 * ypos) / 1000.0);  // Transform to the range [-1, 1] for Y
-    // Calculate the change in x and y
-    GLfloat deltaX = x - lastX;
-    GLfloat deltaY = y - lastY;
-    // Update the first point of the line segment
-    LineposData[0] = x;
-    LineposData[1] = y;
-    // Move the remaining line segments based on the change in cursor position
-    for (int i = 2; i < LineposData.size(); i += 2) {
-        LineposData[i] += deltaX;
-        LineposData[i + 1] += deltaY;
-    }
-    // Update lastX and lastY for the next iteration
-    lastX = x;
-    lastY = y;
-}
-
-static void rotateRays(GLFWwindow* window, int& oldState, std::vector<GLfloat>& LineposData) {
-    int LnewState = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
-    int RnewState = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT);
-
-    if (oldState == GLFW_PRESS && (LnewState == GLFW_RELEASE || RnewState == GLFW_RELEASE)) {
-        for (int i = 0; i < LineposData.size(); i += 2) {
-            float rotationAngle = (LnewState == GLFW_RELEASE) ? -0.1f : 0.1f;
-            genRotatedPoints(LineposData[0], LineposData[1], LineposData[i], LineposData[i + 1], rotationAngle);
-        }
-        oldState = GLFW_RELEASE;
-    } else if (LnewState == GLFW_PRESS || RnewState == GLFW_PRESS) {
-        oldState = (LnewState == GLFW_PRESS) ? LnewState : RnewState;
-    }
-}
-
 static DrawDetails UploadRayMesh(
     std::vector<GLfloat>& verts,
     std::vector<GLfloat>& colors,
@@ -170,6 +118,21 @@ static DrawDetails UploadRayMesh(
     return DrawDetails(vaoHandle, static_cast<uint32_t>(elems.size()));
 }
 
+static void UnloadMesh(std::vector<DrawDetails>& details) {
+    for (const auto& d : details) {
+        glDeleteVertexArrays(1, &d.VAO);
+    }
+    details.clear();
+}
+
+static void Draw(std::vector<DrawDetails>& drawDetails) {
+    for (const auto& d : drawDetails) {
+        glBindVertexArray(d.VAO);
+        glDrawElements(GL_TRIANGLES, d.numElements, GL_UNSIGNED_INT, nullptr);
+    }
+    glBindVertexArray(0);
+}
+
 static void DrawLines(std::vector<DrawDetails>& drawDetails) {
     for (const auto& d : drawDetails) {
         glBindVertexArray(d.VAO);
@@ -178,11 +141,48 @@ static void DrawLines(std::vector<DrawDetails>& drawDetails) {
     glBindVertexArray(0);
 }
 
+
+static void moveRays(GLFWwindow* window, std::vector<GLfloat>& LineposData, GLfloat& lastX, GLfloat& lastY) {
+    // Get cursor position
+    double xpos, ypos;
+    glfwGetCursorPos(window, &xpos, &ypos);
+    GLfloat x = static_cast<GLfloat>((2.0 * xpos) / 1000.0 - 1.0);  // Transform to the range [-1, 1] for X
+    GLfloat y = static_cast<GLfloat>(1.0 - (2.0 * ypos) / 1000.0);  // Transform to the range [-1, 1] for Y
+    // Calculate the change in x and y
+    GLfloat deltaX = x - lastX;
+    GLfloat deltaY = y - lastY;
+    // Update the first point of the line segment
+    LineposData[0] = x;
+    LineposData[1] = y;
+    // Move the remaining line segments based on the change in cursor position
+    for (int i = 2; i < LineposData.size(); i += 2) {
+        LineposData[i] += deltaX;
+        LineposData[i + 1] += deltaY;
+    }
+    // Update lastX and lastY for the next iteration
+    lastX = x;
+    lastY = y;
+}
+
+static void rotateRays(GLFWwindow* window, int& oldState, std::vector<GLfloat>& LineposData) {
+    int LnewState = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
+    int RnewState = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT);
+
+    if (oldState == GLFW_PRESS && (LnewState == GLFW_RELEASE || RnewState == GLFW_RELEASE)) {
+        for (int i = 0; i < LineposData.size(); i += 2) {
+            float rotationAngle = (LnewState == GLFW_RELEASE) ? -0.1f : 0.1f;
+            genRotatedPoints(LineposData[0], LineposData[1], LineposData[i], LineposData[i + 1], rotationAngle);
+        }
+        oldState = GLFW_RELEASE;
+    } else if (LnewState == GLFW_PRESS || RnewState == GLFW_PRESS) {
+        oldState = (LnewState == GLFW_PRESS) ? LnewState : RnewState;
+    }
+}
+
 static void doThatCollisionStuff(std::vector<RaysData>& MyRays, 
                                 std::vector<WallsData>& wallsData, 
                                 std::vector<DrawDetails>& ourLineDrawDetails){
     // here i can calculate and change lenght of rays
-    //for each ray check for colision with any wall and change rays length
     for (auto& ray : MyRays) {
         for (int i = 1; i < (ray.LineposData.size() / 2); ++i) {
             Point currentRayStartPoint = {ray.LineposData[0], ray.LineposData[1]};

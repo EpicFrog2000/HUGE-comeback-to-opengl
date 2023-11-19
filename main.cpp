@@ -24,12 +24,14 @@ std::vector<DrawDetails> ourDrawDetails,
 std::vector<DrawDetails> ourLineDrawDetails,
 std::vector<RaysData> MyRays,
 std::vector<WallsData> wallsData) {
+    // Init cursor position
     double xpos, ypos;
     glfwGetCursorPos(window, &xpos, &ypos);
     GLfloat x = static_cast<GLfloat>((2.0 * xpos) / 1000.0 - 1.0);  // Transform to the range [-1, 1] for X
     GLfloat y = static_cast<GLfloat>(1.0 - (2.0 * ypos) / 1000.0);  // Transform to the range [-1, 1] for Y
     GLfloat lastX = 0.0f;
     GLfloat lastY = 0.0f;
+
     while (glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS && !glfwWindowShouldClose(window)) {
         // Measure frames
         double currentTime = glfwGetTime();
@@ -44,10 +46,11 @@ std::vector<WallsData> wallsData) {
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         
-        
         // Rotate points by 10 degrees on LMB
         static int oldState = GLFW_RELEASE;
         rotateRays(window, oldState, MyRays[0].LineposData);
+
+        //Move rays to mouse position
         moveRays(window, MyRays[0].LineposData, lastX, lastY);
         ourLineDrawDetails.clear();
         ourLineDrawDetails.push_back(UploadRayMesh(
@@ -56,6 +59,8 @@ std::vector<WallsData> wallsData) {
             MyRays[0].LineElems // indices
         ));
 
+
+        //check if ray is colliding with wall and change its length
         doThatCollisionStuff(MyRays, wallsData, ourLineDrawDetails);
 
         //make dynamic walls creation
@@ -64,6 +69,7 @@ std::vector<WallsData> wallsData) {
         Draw(ourDrawDetails);
         DrawLines(ourLineDrawDetails);
 
+        //needed becouse changed data in VAO and am 2 stupid to do better for now
         UnloadMesh(ourLineDrawDetails);
 
         glfwSwapBuffers(window);
@@ -146,10 +152,9 @@ int main() {
     GLfloat y = 0.0f;
     // Set up base rays
     const int rayCount = 90;
-    GLfloat baseRayLenght = 1.0f;  // Desired line length
-    // Initialize to store the combined vertices
+    GLfloat baseRayLenght = 1.0f;  
     std::vector<GLfloat> LineposData = {
-        x,y, // stis is starting point of all rays
+        x,y,
     };
     std::vector<GLfloat>  LinecolorData = {
         1.0f, 1.0f, 1.0f,
@@ -175,8 +180,6 @@ int main() {
         MyRays[0].LineElems // indices
         ));
 
-
-    // Set background color
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     glLineWidth(0.5f);
     glEnable(GL_LINE_SMOOTH);
@@ -187,7 +190,7 @@ int main() {
     glfwWindowHint(GLFW_SAMPLES, 16);
     glEnable(GL_MULTISAMPLE);  
     
-    // Your rendering loop
+    // Rendering loop
     renderLoop(window, ourDrawDetails, ourLineDrawDetails, MyRays, wallsData);
 
     // UnloadMesh here
